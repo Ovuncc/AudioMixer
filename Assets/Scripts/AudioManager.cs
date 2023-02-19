@@ -35,10 +35,20 @@ public class AudioManager : MonoBehaviour
 
     private bool setVolumeLayer = false;
 
+    private string referenceName;
+    private string child1RefName;
+    private string child2RefName;
+    private string child3RefName;
+
 
     void Start()
     {
         //PlayerPrefs.DeleteAll();
+        referenceName = this.gameObject.name;
+        child1RefName = referenceName + StringNames.child1Vol;
+        child2RefName = referenceName + StringNames.child2Vol;
+        child3RefName = referenceName + StringNames.child3Vol;
+
         MasterIntensity = minSoundVolume;
 
         AudioLayer1.volume = minSoundVolume;
@@ -46,11 +56,6 @@ public class AudioManager : MonoBehaviour
         AudioLayer3.volume = minSoundVolume;
 
         HashKeyCheck();
-
-        //Layer_1_Intensity = PlayerPrefs.GetFloat(StringNames.child1Vol);
-        //Layer_2_Intensity = PlayerPrefs.GetFloat(StringNames.child2Vol);
-        //Layer_3_Intensity = PlayerPrefs.GetFloat(StringNames.child3Vol);
-        //Debug.Log(PlayerPrefs.GetFloat(StringNames.child1Vol));
 
         SetVolume(StringNames.MasterVol, minSoundVolume);
         SetVolume(StringNames.drone1, minSoundVolume);
@@ -70,20 +75,21 @@ public class AudioManager : MonoBehaviour
 
         if (setVolumeLayer)
         {
-            SetAudioSourceVolume(AudioLayer1, Layer_1_Intensity, StringNames.child1Vol);
-            SetAudioSourceVolume(AudioLayer2, Layer_2_Intensity, StringNames.child2Vol);
-            SetAudioSourceVolume(AudioLayer3, Layer_3_Intensity, StringNames.child3Vol);
+            SetAudioSourceVolume(AudioLayer1, Layer_1_Intensity, child1RefName);
+            SetAudioSourceVolume(AudioLayer2, Layer_2_Intensity, child2RefName);
+            SetAudioSourceVolume(AudioLayer3, Layer_3_Intensity, child3RefName);
         }
 
     }
 
+    #region Fade
     private void FadeInAudio()
     {
         Debug.Log("Playing...");
         PlayAudio();
-        float layer1Soundlevel = PlayerPrefs.GetFloat(StringNames.child1Vol);
-        float layer2Soundlevel = PlayerPrefs.GetFloat(StringNames.child2Vol);
-        float layer3Soundlevel = PlayerPrefs.GetFloat(StringNames.child3Vol);
+        float layer1Soundlevel = PlayerPrefs.GetFloat(child1RefName);
+        float layer2Soundlevel = PlayerPrefs.GetFloat(child2RefName);
+        float layer3Soundlevel = PlayerPrefs.GetFloat(child3RefName);
 
         StartCoroutine(StartFade(AudioLayer1, fadeDuration, layer1Soundlevel));
         StartCoroutine(StartFade(AudioLayer2, fadeDuration, layer2Soundlevel));
@@ -124,6 +130,20 @@ public class AudioManager : MonoBehaviour
         AudioLayer2.Stop();
         AudioLayer3.Stop();
     }
+    public static IEnumerator StartFade(AudioSource audioSource, float duration, float targetVolume)
+    {
+        float currentTime = 0;
+        float start = audioSource.volume;
+        while (currentTime < duration)
+        {
+            currentTime += Time.deltaTime;
+            audioSource.volume = Mathf.Lerp(start, targetVolume, currentTime / duration);
+            //print(layer);
+            yield return null;
+        }
+        yield break;
+    }
+    #endregion
 
     private void SetVolume(string name,float sliderValue)
     {
@@ -157,59 +177,45 @@ public class AudioManager : MonoBehaviour
         PlayerPrefs.SetFloat(name, value);
     }
 
-    public static IEnumerator StartFade(AudioSource audioSource, float duration, float targetVolume)
-    {
-        float currentTime = 0;
-        float start = audioSource.volume;
-        while (currentTime < duration)
-        {
-            currentTime += Time.deltaTime;
-            audioSource.volume = Mathf.Lerp(start, targetVolume, currentTime / duration);
-            //print(layer);
-            yield return null;
-        }
-        yield break;
-    }
-
     private void HashKeyCheck()
     {
-        if (PlayerPrefs.HasKey(StringNames.child1Vol))
+        if (PlayerPrefs.HasKey(child1RefName))
         {
             //Debug.Log("The key " + StringNames.child1Vol + " exists");
-            Layer_1_Intensity = PlayerPrefs.GetFloat(StringNames.child1Vol);
+            Layer_1_Intensity = PlayerPrefs.GetFloat(child1RefName);
 
         }
         else
         {
             //Debug.Log("The key " + StringNames.child1Vol + " does not exist");
-            PlayerPrefs.SetFloat(StringNames.child1Vol, minSoundVolume);
-            Layer_1_Intensity = PlayerPrefs.GetFloat(StringNames.child1Vol);
+            PlayerPrefs.SetFloat(child1RefName, minSoundVolume);
+            Layer_1_Intensity = PlayerPrefs.GetFloat(child1RefName);
         }
 
-        if (PlayerPrefs.HasKey(StringNames.child2Vol))
+        if (PlayerPrefs.HasKey(child2RefName))
         {
             //Debug.Log("The key " + StringNames.child2Vol + " exists");
-            Layer_2_Intensity = PlayerPrefs.GetFloat(StringNames.child2Vol);
+            Layer_2_Intensity = PlayerPrefs.GetFloat(child2RefName);
 
         }
         else
         {
             //Debug.Log("The key " + StringNames.child2Vol + " does not exist");
-            PlayerPrefs.SetFloat(StringNames.child2Vol, minSoundVolume);
-            Layer_2_Intensity = PlayerPrefs.GetFloat(StringNames.child2Vol);
+            PlayerPrefs.SetFloat(child2RefName, minSoundVolume);
+            Layer_2_Intensity = PlayerPrefs.GetFloat(child2RefName);
         }
 
-        if (PlayerPrefs.HasKey(StringNames.child3Vol))
+        if (PlayerPrefs.HasKey(child3RefName))
         {
             //Debug.Log("The key " + StringNames.child3Vol + " exists");
-            Layer_3_Intensity = PlayerPrefs.GetFloat(StringNames.child3Vol);
+            Layer_3_Intensity = PlayerPrefs.GetFloat(child3RefName);
 
         }
         else
         {
             //Debug.Log("The key " + StringNames.child3Vol + " does not exist");
-            PlayerPrefs.SetFloat(StringNames.child3Vol, minSoundVolume);
-            Layer_3_Intensity = PlayerPrefs.GetFloat(StringNames.child3Vol);
+            PlayerPrefs.SetFloat(child3RefName, minSoundVolume);
+            Layer_3_Intensity = PlayerPrefs.GetFloat(child3RefName);
         }
     }
 }
