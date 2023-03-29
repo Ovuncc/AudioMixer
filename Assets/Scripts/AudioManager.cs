@@ -1,12 +1,13 @@
-using System.Collections;
+ using System.Collections;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Audio;
 
 public class AudioManager : MonoBehaviour
 {
-
-    [Header("Master")]
+    [Header("DronesMaster")]
     [Range(0.0001f, 1)]
     [SerializeField] private float MasterIntensity;
     [SerializeField] private AudioMixer audioMixer;
@@ -26,16 +27,16 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private float Layer_3_Intensity;
     [SerializeField] private AudioSource AudioLayer3;
 
-    private float minSoundVolume = 0.0001f;
-    private float fadeDuration = 0.8f;
+    private const float minSoundVolume = 0.0001f;
+    private const float maxSoundVolume = 1f;
 
-    private bool soundPlaying = false;
-    private bool fadeInLerp = false;
-    private bool fadeOutLerp = false;
+    private const float fadeDuration = 0.8f;
 
-    private bool setVolumeLayer = false;
+    private static bool isFading = false;
+    private static bool isPlaying = true;
 
     private string referenceName;
+    private string dronesMasterName;
     private string child1RefName;
     private string child2RefName;
     private string child3RefName;
@@ -45,104 +46,130 @@ public class AudioManager : MonoBehaviour
     {
         //PlayerPrefs.DeleteAll();
         referenceName = this.gameObject.name;
+        dronesMasterName = referenceName + StringNames.DronesMaster;
         child1RefName = referenceName + StringNames.child1Vol;
         child2RefName = referenceName + StringNames.child2Vol;
         child3RefName = referenceName + StringNames.child3Vol;
 
-        MasterIntensity = minSoundVolume;
+        MasterIntensity = maxSoundVolume;
 
-        AudioLayer1.volume = minSoundVolume;
-        AudioLayer2.volume = minSoundVolume;
-        AudioLayer3.volume = minSoundVolume;
+        AudioLayer1.volume = maxSoundVolume;
+        AudioLayer2.volume = maxSoundVolume;
+        AudioLayer3.volume = maxSoundVolume;
 
         HashKeyCheck();
 
-        SetVolume(StringNames.MasterVol, minSoundVolume);
-        SetVolume(StringNames.drone1, minSoundVolume);
-        SetVolume(StringNames.drone2, minSoundVolume);
-        SetVolume(StringNames.drone3, minSoundVolume);
+        SetVolume(StringNames.DronesMaster, maxSoundVolume);
+        SetVolume(StringNames.drone1, maxSoundVolume);
+        SetVolume(StringNames.drone2, maxSoundVolume);
+        SetVolume(StringNames.drone3, maxSoundVolume);
+        ActivateAudioSources();
+
+        Debug.Log("To play audio: K");
+        Debug.Log("To stop audio: Space");
+        Debug.Log("To save the data: S");
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.K))
-            FadeInAudio();
-        else if (Input.GetKeyDown(KeyCode.Space))
-            FadeOutAudio();
 
-        SetVolume(StringNames.MasterVol, MasterIntensity);
+        if (Input.GetKeyDown(KeyCode.K) && !isFading) // Play
+            PlayAudio();
+        else if (Input.GetKeyDown(KeyCode.Space) && !isFading) // Stop
+            StopAudio();
+        else if (Input.GetKeyDown(KeyCode.S))
+            SaveValues();
+
+        if (isPlaying)
+            ManageSoundLayers();
+    }
+
+    private void ManageSoundLayers()
+    {
+        SetVolume(StringNames.DronesMaster, MasterIntensity);
         AdjustVolumeAccordingtoItsMaster(MasterIntensity);
+        SetAudioSourceVolume(AudioLayer1, Layer_1_Intensity, child1RefName);
+        SetAudioSourceVolume(AudioLayer2, Layer_2_Intensity, child2RefName);
+        SetAudioSourceVolume(AudioLayer3, Layer_3_Intensity, child3RefName);
+    }
 
-        if (setVolumeLayer)
-        {
-            SetAudioSourceVolume(AudioLayer1, Layer_1_Intensity, child1RefName);
-            SetAudioSourceVolume(AudioLayer2, Layer_2_Intensity, child2RefName);
-            SetAudioSourceVolume(AudioLayer3, Layer_3_Intensity, child3RefName);
-        }
-
+    private void SaveValues()
+    {
+        Debug.Log("Values successfully saved!");
+        PlayerPrefs.SetFloat(dronesMasterName, MasterIntensity);
+        PlayerPrefs.SetFloat(child1RefName, Layer_1_Intensity);
+        PlayerPrefs.SetFloat(child2RefName, Layer_2_Intensity);
+        PlayerPrefs.SetFloat(child3RefName, Layer_3_Intensity);
     }
 
     #region Fade
-    private void FadeInAudio()
-    {
-        Debug.Log("Playing...");
-        PlayAudio();
-        float layer1Soundlevel = PlayerPrefs.GetFloat(child1RefName);
-        float layer2Soundlevel = PlayerPrefs.GetFloat(child2RefName);
-        float layer3Soundlevel = PlayerPrefs.GetFloat(child3RefName);
 
-        StartCoroutine(StartFade(AudioLayer1, fadeDuration, layer1Soundlevel));
-        StartCoroutine(StartFade(AudioLayer2, fadeDuration, layer2Soundlevel));
-        StartCoroutine(StartFade(AudioLayer3, fadeDuration, layer3Soundlevel));
-        Invoke("MatchAudioVolume_with_Layer", fadeDuration);
-
-    }
-
-    private void FadeOutAudio()
-    {
-        Debug.Log("Stoping...");
-        DontMatchAudioVolume_with_Layer();
-        StartCoroutine(StartFade(AudioLayer1, fadeDuration, minSoundVolume));
-        StartCoroutine(StartFade(AudioLayer2, fadeDuration, minSoundVolume));
-        StartCoroutine(StartFade(AudioLayer3, fadeDuration, minSoundVolume));
-        Invoke("StopAudio", fadeDuration);
-    }
-    private void MatchAudioVolume_with_Layer()
-    {
-        setVolumeLayer = true;
-    }
-    private void DontMatchAudioVolume_with_Layer()
-    {
-        setVolumeLayer = false;
-    }
     private void PlayAudio()
     {
-        AudioLayer1.volume = minSoundVolume;
-        AudioLayer1.Play();
-        AudioLayer2.volume = minSoundVolume;
-        AudioLayer2.Play();
-        AudioLayer3.volume = minSoundVolume;
-        AudioLayer3.Play();
+        float startVal = 0f;
+        float targetVolume = 0f;
+        audioMixer.GetFloat(StringNames.MasterVol, out startVal);
+        bool fadeOkayCheck = (startVal != targetVolume);
+        if (fadeOkayCheck)
+        {
+            Debug.Log("Playing...");
+            ActivateAudioSources();
+            StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
+        }
+        else
+        {
+            Debug.Log("Already playing!");
+        }
     }
     private void StopAudio()
+    {
+        float startVal = 0f;
+        float targetVolume = -80f;
+        audioMixer.GetFloat(StringNames.MasterVol, out startVal);
+        bool fadeOkayCheck = (startVal != targetVolume);
+        if (fadeOkayCheck)
+        {
+            Debug.Log("Stoping...");
+            StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
+            Invoke("DeactivateAudioSources", fadeDuration);
+        }
+        else
+        {
+            Debug.Log("Already stopped!");
+        }
+    }
+
+    private static IEnumerator FadeMaster(AudioMixer mixer,float duration, float start, float targetVolume)
+    {
+        float currentTime = 0;
+        isFading = true;
+        while (currentTime < duration)
+        {
+            currentTime += Time.deltaTime;
+            float newVolume = Mathf.Lerp(start, targetVolume, currentTime / duration);
+            mixer.SetFloat(StringNames.MasterVol, newVolume);
+            //Debug.Log(newVolume);
+            yield return null;
+        }
+        isFading = false;
+        yield break;
+
+    }
+    private void ActivateAudioSources()
+    {
+        AudioLayer1.Play();
+        AudioLayer2.Play();
+        AudioLayer3.Play();
+        isPlaying = true;
+    }
+    private void DeactivateAudioSources()
     {
         AudioLayer1.Stop();
         AudioLayer2.Stop();
         AudioLayer3.Stop();
+        isPlaying = false;
     }
-    public static IEnumerator StartFade(AudioSource audioSource, float duration, float targetVolume)
-    {
-        float currentTime = 0;
-        float start = audioSource.volume;
-        while (currentTime < duration)
-        {
-            currentTime += Time.deltaTime;
-            audioSource.volume = Mathf.Lerp(start, targetVolume, currentTime / duration);
-            //print(layer);
-            yield return null;
-        }
-        yield break;
-    }
+    
     #endregion
 
     private void SetVolume(string name,float sliderValue)
@@ -174,11 +201,24 @@ public class AudioManager : MonoBehaviour
     private void SetAudioSourceVolume(AudioSource audioSource, float value, string name)
     {
         audioSource.volume = value;
-        PlayerPrefs.SetFloat(name, value);
+        //PlayerPrefs.SetFloat(name, value);
     }
 
     private void HashKeyCheck()
     {
+        if (PlayerPrefs.HasKey(dronesMasterName))
+        {
+            //Debug.Log("The key " + StringNames.DronesMaster + " exists");
+            MasterIntensity = PlayerPrefs.GetFloat(dronesMasterName);
+
+        }
+        else
+        {
+            //Debug.Log("The key " + StringNames.DronesMaster + " does not exist");
+            PlayerPrefs.SetFloat(dronesMasterName, maxSoundVolume);
+            MasterIntensity = PlayerPrefs.GetFloat(dronesMasterName);
+        }
+
         if (PlayerPrefs.HasKey(child1RefName))
         {
             //Debug.Log("The key " + StringNames.child1Vol + " exists");
@@ -188,7 +228,7 @@ public class AudioManager : MonoBehaviour
         else
         {
             //Debug.Log("The key " + StringNames.child1Vol + " does not exist");
-            PlayerPrefs.SetFloat(child1RefName, minSoundVolume);
+            PlayerPrefs.SetFloat(child1RefName, maxSoundVolume);
             Layer_1_Intensity = PlayerPrefs.GetFloat(child1RefName);
         }
 
@@ -201,7 +241,7 @@ public class AudioManager : MonoBehaviour
         else
         {
             //Debug.Log("The key " + StringNames.child2Vol + " does not exist");
-            PlayerPrefs.SetFloat(child2RefName, minSoundVolume);
+            PlayerPrefs.SetFloat(child2RefName, maxSoundVolume);
             Layer_2_Intensity = PlayerPrefs.GetFloat(child2RefName);
         }
 
@@ -214,7 +254,7 @@ public class AudioManager : MonoBehaviour
         else
         {
             //Debug.Log("The key " + StringNames.child3Vol + " does not exist");
-            PlayerPrefs.SetFloat(child3RefName, minSoundVolume);
+            PlayerPrefs.SetFloat(child3RefName, maxSoundVolume);
             Layer_3_Intensity = PlayerPrefs.GetFloat(child3RefName);
         }
     }
