@@ -63,8 +63,9 @@ public class AudioManager : MonoBehaviour
         SetVolume(StringNames.drone1, maxSoundVolume);
         SetVolume(StringNames.drone2, maxSoundVolume);
         SetVolume(StringNames.drone3, maxSoundVolume);
-        ActivateAudioSources();
-
+        DeactivateAudioSources();
+        StopAudio();
+      
         Debug.Log("To play audio: K");
         Debug.Log("To stop audio: Space");
         Debug.Log("To save the data: S");
