@@ -51,7 +51,7 @@ public class AudioManager : MonoBehaviour
         child2RefName = referenceName + StringNames.child2Vol;
         child3RefName = referenceName + StringNames.child3Vol;
 
-        MasterIntensity = maxSoundVolume;
+        //MasterIntensity = maxSoundVolume;
 
         AudioLayer1.volume = maxSoundVolume;
         AudioLayer2.volume = maxSoundVolume;
@@ -69,6 +69,7 @@ public class AudioManager : MonoBehaviour
         Debug.Log("To play audio: K");
         Debug.Log("To stop audio: Space");
         Debug.Log("To save the data: S");
+
     }
 
     void Update()
@@ -107,20 +108,32 @@ public class AudioManager : MonoBehaviour
 
     private void PlayAudio()
     {
-        float startVal = 0f;
+        ActivateAudioSources();
+        float startVal = -80f;
         float targetVolume = 0f;
         audioMixer.GetFloat(StringNames.MasterVol, out startVal);
         bool fadeOkayCheck = (startVal != targetVolume);
         if (fadeOkayCheck)
         {
             Debug.Log("Playing...");
-            ActivateAudioSources();
-            StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
+            StartCoroutine(FadeDroneMaster(fadeDuration, 0.0001f, PlayerPrefs.GetFloat(dronesMasterName)));
+            StartCoroutine(FadeAudioSource(AudioLayer1, fadeDuration, 0f, Layer_1_Intensity));
+            StartCoroutine(FadeAudioSource(AudioLayer2, fadeDuration, 0f, Layer_2_Intensity));
+            StartCoroutine(FadeAudioSource(AudioLayer3, fadeDuration, 0f, Layer_3_Intensity));
+            //StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
+            Invoke("StartFadingMaster", 0.3f);
+
         }
         else
         {
             Debug.Log("Already playing!");
         }
+    }
+    private void StartFadingMaster()
+    {
+        float startVal = -80f;
+        float targetVolume = 0f;
+        StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
     }
     private void StopAudio()
     {
@@ -132,6 +145,10 @@ public class AudioManager : MonoBehaviour
         {
             Debug.Log("Stoping...");
             StartCoroutine(FadeMaster(audioMixer, fadeDuration, startVal, targetVolume));
+            StartCoroutine(FadeDroneMaster(fadeDuration, PlayerPrefs.GetFloat(dronesMasterName), 0.0001f));
+            StartCoroutine(FadeAudioSource(AudioLayer1, fadeDuration, Layer_1_Intensity, 0f));
+            StartCoroutine(FadeAudioSource(AudioLayer2, fadeDuration, Layer_2_Intensity, 0f));
+            StartCoroutine(FadeAudioSource(AudioLayer3, fadeDuration, Layer_3_Intensity, 0f));
             Invoke("DeactivateAudioSources", fadeDuration);
         }
         else
@@ -149,13 +166,41 @@ public class AudioManager : MonoBehaviour
             currentTime += Time.deltaTime;
             float newVolume = Mathf.Lerp(start, targetVolume, currentTime / duration);
             mixer.SetFloat(StringNames.MasterVol, newVolume);
-            //Debug.Log(newVolume);
             yield return null;
         }
         isFading = false;
         yield break;
 
     }
+    private IEnumerator FadeDroneMaster(float duration, float start, float targetVolume)
+    {
+        float currentTime2 = 0;
+        while (currentTime2 < duration)
+        {
+            currentTime2 += Time.deltaTime;
+            float newVolume2 = Mathf.Lerp(start, targetVolume, currentTime2 / duration);
+            MasterIntensity = newVolume2;
+            ManageSoundLayers();
+            yield return null;
+        }
+
+        yield break;
+
+    }
+    private IEnumerator FadeAudioSource(AudioSource audioSource, float duration, float start, float targetVolume)
+    {
+        float currentTime3 = 0;
+        while (currentTime3 < duration)
+        {
+            currentTime3 += Time.deltaTime;
+            float newVolume2 = Mathf.Lerp(start, targetVolume, currentTime3 / duration);
+            audioSource.volume = newVolume2;
+            yield return null;
+        }
+
+        yield break;
+    }
+
     private void ActivateAudioSources()
     {
         AudioLayer1.Play();
@@ -170,7 +215,19 @@ public class AudioManager : MonoBehaviour
         AudioLayer3.Stop();
         isPlaying = false;
     }
-    
+
+    private IEnumerator Delay(float duration)
+    {
+        float currentTime3 = 0;
+        while (currentTime3 < duration)
+        {
+            currentTime3 += Time.deltaTime;
+            yield return null;
+        }
+
+        yield break;
+    }
+
     #endregion
 
     private void SetVolume(string name,float sliderValue)
@@ -204,7 +261,7 @@ public class AudioManager : MonoBehaviour
         audioSource.volume = value;
         //PlayerPrefs.SetFloat(name, value);
     }
-
+   
     private void HashKeyCheck()
     {
         if (PlayerPrefs.HasKey(dronesMasterName))
