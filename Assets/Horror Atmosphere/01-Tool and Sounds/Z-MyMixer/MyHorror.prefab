@@ -41,7 +41,7 @@ AudioSource:
   m_GameObject: {fileID: 2363323568472825792}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: -1360203494527839316, guid: 5855b46564123874b8b1e6c9c41cd7a7, type: 2}
+  OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 0
@@ -169,7 +169,7 @@ AudioSource:
   m_GameObject: {fileID: 2363323568625816425}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: -6286336908340526173, guid: 5855b46564123874b8b1e6c9c41cd7a7, type: 2}
+  OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 0
@@ -297,7 +297,7 @@ AudioSource:
   m_GameObject: {fileID: 2363323569217046122}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 9014919921774455498, guid: 5855b46564123874b8b1e6c9c41cd7a7, type: 2}
+  OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 0
@@ -432,7 +432,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MasterIntensity: 0
-  audioMixer: {fileID: 24100000, guid: 5855b46564123874b8b1e6c9c41cd7a7, type: 2}
+  audioMixer: {fileID: 0}
   Layer_1_Intensity: 0
   AudioLayer1: {fileID: 0}
   Layer_2_Intensity: 0
